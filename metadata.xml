@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lom xmlns="http://www.imsglobal.org/xsd/imsmd_rootv1p2p1"
+     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+     xsi:schemaLocation="http://www.imsglobal.org/xsd/imsmd_rootv1p2p1 imsmd_rootv1p2p1.xsd">
+  <general>
+    <identifier>DERINLIK_VOLKANIZMASI_SIM_METADATA_01</identifier>
+    <title>
+      <langstring xml:lang="tr">Derinlik Volkanizması</langstring>
+    </title>
+    <language>tr</language>
+    <description>
+      <langstring xml:lang="tr">Volkanik yapıları doğru yerlere sürükleyip bırakarak öğrenme etkinliği. Öğrenciler aktif volkan, dayk, sill, batolit ve lakolit gibi derinlik volkanizması yapılarını görsel üzerinde doğru konumlarına yerleştirerek tektonik yapılar hakkında bilgi edinirler.</langstring>
+    </description>
+    <keyword>
+      <langstring xml:lang="tr">volkanizma</langstring>
+      <langstring xml:lang="tr">tektonik</langstring>
+      <langstring xml:lang="tr">coğrafya</langstring>
+      <langstring xml:lang="tr">etkileşimli</langstring>
+      <langstring xml:lang="tr">sürükle-bırak</langstring>
+      <langstring xml:lang="tr">jeoloji</langstring>
+    </keyword>
+  </general>
+  
+  <lifecycle>
+    <version>
+      <langstring xml:lang="tr">1.0</langstring>
+    </version>
+    <status>
+      <source>LOMv1.0</source>
+      <value>Final</value>
+    </status>
+  </lifecycle>
+  
+  <metametadata>
+    <identifier>DERINLIK_VOLKANIZMASI_SIM_METADATA_01</identifier>
+    <metadataschema>LOMv1.0</metadataschema>
+    <metadataschema>SCORM_CAM_1.2</metadataschema>
+  </metametadata>
+  
+  <technical>
+    <format>text/html</format>
+    <location>index.html</location>
+  </technical>
+  
+  <educational>
+    <interactivitytype>
+      <source>LOMv1.0</source>
+      <value>Active</value>
+    </interactivitytype>
+    <learningresourcetype>
+      <source>LOMv1.0</source>
+      <value>Simulation</value>
+    </learningresourcetype>
+    <interactivitylevel>
+      <source>LOMv1.0</source>
+      <value>High</value>
+    </interactivitylevel>
+    <intendedenduserrole>
+      <source>LOMv1.0</source>
+      <value>Learner</value>
+    </intendedenduserrole>
+  </educational>
+  
+  <rights>
+    <cost>
+      <source>LOMv1.0</source>
+      <value>No</value>
+    </cost>
+    <copyrightandotherrestrictions>
+      <source>LOMv1.0</source>
+      <value>Yes</value>
+    </copyrightandotherrestrictions>
+    <description>
+      <langstring xml:lang="tr">Tüm hakları saklıdır. İzinsiz kullanılamaz.</langstring>
+    </description>
+  </rights>
+</lom>

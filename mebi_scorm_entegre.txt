@@ -1,0 +1,369 @@
+# SCORM 1.2 Entegrasyon Kılavuzu - Yapay Zeka İçin Optimize Edilmiş Versiyon
+
+## 🎯 AMAÇ
+Bu kılavuz, yapay zekanın web tabanlı eğitim içeriklerini SCORM 1.2 standardına uygun hale getirmesi için hazırlanmıştır. Yapay zeka bu kılavuzu kullanarak otomatik olarak gerekli dosyaları oluşturacak ve entegrasyonu tamamlayacaktır.
+
+---
+
+## 📦 GEREKLI DOSYALAR VE YAPISI
+
+```
+proje-klasoru/
+├── index.html (Ana içerik - mevcut)
+├── SCORM_API_wrapper.js (Kullanıcı tarafından sağlanacak)
+├── imsmanifest.xml (YZ tarafından oluşturulacak)
+├── metadata.xml (YZ tarafından oluşturulacak)
+└── diğer dosyalar (css, js, görseller vb.)
+```
+
+---
+
+## 🤖 YAPAY ZEKA İÇİN TALİMATLAR
+
+### ADIM 1: Projeden Gerekli Bilgileri Otomatik Çıkart
+
+Kullanıcıdan veri isteme. Gerekli tüm bilgileri mevcut proje dosyalarını analiz ederek belirle:
+
+1. **Etkinlik Adı:** Öncelikle `index.html` içindeki `<title>` etiketini kullan. Uygun değilse (çok genel, boş veya İngilizce ise) ilk görünen `h1` ya da belirgin başlığı seç. Eksikse dosya adından anlamlı bir başlık türet.
+
+2. **Etkinlik Açıklaması:** Açılış bölümündeki alt başlık, kahraman paragrafı ya da kullanıcıya verilen ilk yönergelerden kısa bir özet oluştur. Metin yetersizse sayfadaki en açıklayıcı paragrafı özetle. Türkçe değilse veya çok uzun/teknikse sadeleştir.
+
+3. **Anahtar Kelimeler:** İçerikte öne çıkan kavramları (mekân, konu, öğrenme çıktısı, kullanılan araçlar vb.) seç ve 4-6 kelimelik virgülle ayrılmış bir liste oluştur. Tümü Türkçe olsun; özel isimleri olduğu gibi koru.
+
+4. **Proje Dosyaları Listesi:** Çalışma dizinindeki tüm dosya yollarını topla (alt klasörler dahil). `imsmanifest.xml` ve `metadata.xml` dahil edilmelidir; henüz yoksa oluşturduktan sonra listeyi güncelle.
+
+5. **Başarı Skoru:** İçerik bir değerlendirme barındırıyorsa (soru-cevap, quiz, puanlama) en mantıklı eşik değerini seç (genellikle %80). Değerlendirme yoksa varsayılan 80'i kullan ve gerekçesini not et.
+
+---
+
+### ADIM 2: Benzersiz Tanımlayıcı (Identifier) Oluştur
+
+**KURALLARI:**
+- Türkçe karakter kullanma (ç→c, ğ→g, ı→i, ö→o, ş→s, ü→u, İ→I)
+- Boşluk kullanma (boşluk yerine alt çizgi `_`)
+- Tüm harfleri büyük yaz
+- Özel karakterler kullanma
+
+**Dönüşüm Örneği:**
+```
+"COGRAFYA Simülasyonu" → "COGRAFYA_SIMULASYONU"
+```
+
+**Oluşturulacak Identifier'lar:**
+```
+BASE_ID = etkinlik_adından_türetilmiş_id (örn: COGRAFYA_SIMULASYONU_SIMULASYONU)
+
+MANIFEST_ID = {BASE_ID}_SIM_01
+ORG_ID = {BASE_ID}_ORG
+RESOURCE_ID = RESOURCE_01
+ITEM_ID = ITEM_01
+METADATA_ID = {BASE_ID}_SIM_METADATA_01
+```
+
+---
+
+### ADIM 3: index.html Dosyasını Güncelle
+
+**YAPILACAK İŞLEM:**
+`index.html` dosyasının **`</body>` etiketinden hemen önce** aşağıdaki kodu ekle:
+
+```html
+<script src="SCORM_API_wrapper.js"></script>
+<script>
+    // SCORM Entegrasyon Betikleri
+    pipwerks.SCORM.version = "1.2";
+    let scormInitialized = false;
+
+    // SCORM iletişimini başlatan fonksiyon
+    function initializeSCORM() {
+        if (scormInitialized) {
+            console.log("SCORM zaten başlatıldı.");
+            return true;
+        }
+        try {
+            var initSuccess = pipwerks.SCORM.init();
+            console.log("SCORM başlatma başarılı: ", initSuccess);
+            if (initSuccess) {
+                scormInitialized = true;
+                pipwerks.SCORM.set("cmi.core.lesson_status", "incomplete");
+                pipwerks.SCORM.save();
+                console.log("SCORM başarıyla başlatıldı.");
+            } else {
+                console.error("SCORM başlatılamadı.");
+            }
+            return initSuccess;
+        } catch (error) {
+            console.error("SCORM başlatma hatası: ", error);
+            return false;
+        }
+    }
+
+    // Eğitimin tamamlandığı sinyalini LMS'e gönderen fonksiyon
+    function completeSignalToLMS() {
+        if (!scormInitialized) {
+            initializeSCORM();
+        }
+        if (scormInitialized) {
+            try {
+                var setStatusSuccess = pipwerks.SCORM.set("cmi.core.lesson_status", "completed");
+                if (setStatusSuccess) {
+                    console.log("SCORM ders durumu 'completed' olarak ayarlandı.");
+                    var saveSuccess = pipwerks.SCORM.save();
+                    if (saveSuccess) {
+                        console.log("SCORM verileri başarıyla kaydedildi.");
+                    } else {
+                        console.error("SCORM verileri kaydedilemedi.");
+                    }
+                } else {
+                    console.error("SCORM ders durumu ayarlanamadı.");
+                }
+            } catch (error) {
+                console.error("SCORM tamamlama hatası: ", error);
+            }
+        } else {
+            console.error("SCORM başlatılmadığı için tamamlama durumu ayarlanamıyor.");
+        }
+    }
+
+    // Pencere kapatılmadan önce SCORM oturumunu sonlandır
+    window.addEventListener("beforeunload", function () {
+        console.log("SCORM oturumu kapatılıyor...");
+        if (scormInitialized) {
+            pipwerks.SCORM.quit();
+        }
+    });
+
+    // Mobil tarayıcılar için ek güvenlik önlemi
+    window.addEventListener("unload", function () {
+        if (scormInitialized) {
+            pipwerks.SCORM.quit();
+        }
+    });
+    
+    // Sayfa yüklendiğinde SCORM'u otomatik olarak başlat
+    document.addEventListener("DOMContentLoaded", function() {
+        console.log("DOM yüklendi, SCORM başlatılıyor...");
+        initializeSCORM();
+    });
+</script>
+```
+
+**ÖNEMLİ NOT:**
+İçerikte halihazırda bir tamamlanma eylemi varsa ("Bitir", "Tamamla", "Anladım", final ekranı vb.) `completeSignalToLMS()` fonksiyonunu bu akışa bağla. Yeni buton eklemek yerine mevcut etkileşimi kullanmaya öncelik ver.
+
+---
+
+### ADIM 4: imsmanifest.xml Dosyasını Oluştur
+
+**ŞABLON:**
+
+```xml
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<manifest identifier="{MANIFEST_ID}" version="1"
+          xmlns="http://www.imsproject.org/xsd/imscp_rootv1p1p2"
+          xmlns:adlcp="http://www.adlnet.org/xsd/adlcp_rootv1p2"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://www.imsproject.org/xsd/imscp_rootv1p1p2 imscp_rootv1p1p2.xsd
+                              http://www.imsglobal.org/xsd/imsmd_rootv1p2p1 imsmd_rootv1p2p1.xsd
+                              http://www.adlnet.org/xsd/adlcp_rootv1p2 adlcp_rootv1p2.xsd">
+  <metadata>
+    <schema>ADL SCORM</schema>
+    <schemaversion>1.2</schemaversion>
+    <adlcp:location>metadata.xml</adlcp:location>
+  </metadata>
+  
+  <organizations default="{ORG_ID}">
+    <organization identifier="{BASE_ID}">
+      <title>{ETKİNLİK_ADI_TÜRKÇE}</title>
+      <item identifier="{ITEM_ID}" identifierref="{RESOURCE_ID}">
+        <title>{ETKİNLİK_ADI_TÜRKÇE}</title>
+        <adlcp:masteryscore>{BAŞARI_SKORU}</adlcp:masteryscore>
+        <metadata>
+          <schema>ADL SCORM</schema>
+          <schemaversion>1.2</schemaversion>
+          <adlcp:location>metadata.xml</adlcp:location>
+        </metadata>
+      </item>
+    </organization>
+  </organizations>
+  
+  <resources>
+    <resource identifier="{RESOURCE_ID}" type="webcontent" href="index.html" adlcp:scormtype="sco">
+      <metadata>
+        <schema>ADL SCORM</schema>
+        <schemaversion>1.2</schemaversion>
+        <adlcp:location>metadata.xml</adlcp:location>
+      </metadata>
+      {DOSYA_LİSTESİ}
+    </resource>
+  </resources>
+</manifest>
+```
+
+**DOSYA LİSTESİ OLUŞTURMA:**
+Her dosya için bir `<file href="..."/>` satırı ekle:
+
+```xml
+<file href="index.html"/>
+<file href="SCORM_API_wrapper.js"/>
+<file href="style.css"/>
+<file href="main.js"/>
+<file href="images/logo.png"/>
+<file href="sounds/click.mp3"/>
+```
+
+---
+
+### ADIM 5: metadata.xml Dosyasını Oluştur
+
+**ŞABLON:**
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<lom xmlns="http://www.imsglobal.org/xsd/imsmd_rootv1p2p1"
+     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+     xsi:schemaLocation="http://www.imsglobal.org/xsd/imsmd_rootv1p2p1 imsmd_rootv1p2p1.xsd">
+  <general>
+    <identifier>{METADATA_ID}</identifier>
+    <title>
+      <langstring xml:lang="tr">{ETKİNLİK_ADI_TÜRKÇE}</langstring>
+    </title>
+    <language>tr</language>
+    <description>
+      <langstring xml:lang="tr">{ETKİNLİK_AÇIKLAMASI}</langstring>
+    </description>
+    <keyword>
+      {ANAHTAR_KELİMELER}
+    </keyword>
+  </general>
+  
+  <lifecycle>
+    <version>
+      <langstring xml:lang="tr">1.0</langstring>
+    </version>
+    <status>
+      <source>LOMv1.0</source>
+      <value>Final</value>
+    </status>
+  </lifecycle>
+  
+  <metametadata>
+    <identifier>{METADATA_ID}</identifier>
+    <metadataschema>LOMv1.0</metadataschema>
+    <metadataschema>SCORM_CAM_1.2</metadataschema>
+  </metametadata>
+  
+  <technical>
+    <format>text/html</format>
+    <location>index.html</location>
+  </technical>
+  
+  <educational>
+    <interactivitytype>
+      <source>LOMv1.0</source>
+      <value>Active</value>
+    </interactivitytype>
+    <learningresourcetype>
+      <source>LOMv1.0</source>
+      <value>Simulation</value>
+    </learningresourcetype>
+    <interactivitylevel>
+      <source>LOMv1.0</source>
+      <value>High</value>
+    </interactivitylevel>
+    <intendedenduserrole>
+      <source>LOMv1.0</source>
+      <value>Learner</value>
+    </intendedenduserrole>
+  </educational>
+  
+  <rights>
+    <cost>
+      <source>LOMv1.0</source>
+      <value>No</value>
+    </cost>
+    <copyrightandotherrestrictions>
+      <source>LOMv1.0</source>
+      <value>Yes</value>
+    </copyrightandotherrestrictions>
+    <description>
+      <langstring xml:lang="tr">Tüm hakları saklıdır. İzinsiz kullanılamaz.</langstring>
+    </description>
+  </rights>
+</lom>
+```
+
+**ANAHTAR KELİMELER OLUŞTURMA:**
+Her anahtar kelime için ayrı bir `<langstring>` etiketi üret. Kelimeler Adım 1'de çıkardığın listenin sırayla yerleştirilmiş hali olmalıdır.
+
+```xml
+<keyword>
+  <langstring xml:lang="tr">Simülasyon</langstring>
+  <langstring xml:lang="tr">Eğitim</langstring>
+  <langstring xml:lang="tr">COGRAFYA</langstring>
+</keyword>
+```
+
+---
+
+### ADIM 6: Tamamlama Kriterini Belirle ve Kullanıcıya Bildir
+
+1. İçeriğin akışını incele: final ekran, quiz sonuçları veya özel düğmeler var mı?
+2. Tamamlama için en tutarlı mekanizmayı seç:
+   - Final ekran otomatik açılıyorsa, `completeSignalToLMS()` fonksiyonunu bu aşamada tetikle.
+   - Kullanıcı tarafından tıklanan bir eylem ("Bitir", "Devam", vb.) varsa, fonksiyonu o etkinliğe bağla.
+   - Puan/başarı kriteri gerekiyorsa, `cmi.core.score.raw` değerini kaydedip eşik karşılandığında tamamla.
+3. Yaptığın seçimi ve gerekçesini son yanıtta kullanıcıya açıkla; gerekirse alternatif sun ki kullanıcı değiştirebilsin.
+
+---
+
+## ✅ KONTROL LİSTESİ (Yapay Zeka İçin)
+
+Entegrasyonu tamamladıktan sonra şunları kontrol et:
+
+- [ ] Gerekli meta bilgiler proje dosyalarından otomatik çıkarıldı mı?
+- [ ] `index.html` dosyasına SCORM kodları eklendi mi?
+- [ ] `imsmanifest.xml` oluşturuldu mu?
+- [ ] `metadata.xml` oluşturuldu mu ve anahtar kelimeler doğru listelendi mi?
+- [ ] Tüm identifier'lar Türkçe karakter içermiyor mu?
+- [ ] Tüm proje dosyaları `<file>` etiketleriyle listelendi mi?
+- [ ] `SCORM_API_wrapper.js` dosyası kök dizinde mi?
+- [ ] Başarı skoru mantıklı ve 0-100 aralığında mı?
+- [ ] Tamamlama kriteri projeye uygun şekilde ayarlanıp kullanıcıya bildirildi mi?
+
+---
+
+## 📋 ÖRNEK SENARYO
+
+**Kullanıcı Bilgileri:**
+- Etkinlik Adı: "Güneş Sistemi Simülasyonu"
+- Açıklama: "Gezegenler ve yörüngeleri hakkında etkileşimli öğrenme"
+- Anahtar Kelimeler: "güneş sistemi, gezegenler, astronomi"
+- Dosyalar: `index.html`, `style.css`, `app.js`, `images/sun.png`
+- Başarı Skoru: 75
+
+**Üretilecek Identifier'lar:**
+```
+BASE_ID = GUNES_SISTEMI_SIMULASYONU
+MANIFEST_ID = GUNES_SISTEMI_SIMULASYONU_SIM_01
+ORG_ID = GUNES_SISTEMI_SIMULASYONU_ORG
+METADATA_ID = GUNES_SISTEMI_SIMULASYONU_SIM_METADATA_01
+```
+
+---
+
+## 🎯 SON ADIM: Paketleme
+
+Tüm dosyalar hazır olduktan sonra kullanıcıya şunu söyle (ve seçilen tamamlama kuralını hatırlat):
+
+> "Entegrasyon tamamlandı! Şimdi tüm dosyaları (imsmanifest.xml kök dizinde olacak şekilde) ZIP dosyasına sıkıştırıp LMS sisteminize yükleyebilirsiniz. Test için sandbox.moodledemo.net kullanabilirsiniz. Bu paket için tamamlanma kuralı: ... (kısa açıklama)."
+
+---
+
+## 🔍 HATA AYIKLAMA İPUÇLARI
+
+Kullanıcıya tarayıcı konsolu kontrolü için:
+- `F12` tuşuna bas
+- Console sekmesine git
+- "SCORM başlatma başarılı: true" mesajını ara
+- Hata varsa kırmızı mesajları kontrol et

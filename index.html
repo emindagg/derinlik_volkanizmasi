@@ -112,6 +112,7 @@
         
         #success-modal {
             transition: all 0.3s ease;
+            z-index: 10000;
         }
 
         .header-title {
@@ -234,6 +235,10 @@
 
         body.dark .toggle-label {
             color: #cbd5e1;
+        }
+
+        body.dark .header-container p {
+            color: #e5e5e5;
         }
 
         /* Giriş Sayfası Stili */
@@ -406,7 +411,7 @@
             <h1 class="welcome-title">Derinlik Volkanizması</h1>
             
             <div class="achievement-card">
-                <div class="achievement-title">🎯 Kazanım</div>
+                <div class="achievement-title">Kazanım</div>
                 <div class="achievement-item"><strong>COĞ.10.3.1.</strong> Yerkürenin tektonik yapısını çözümleyebilme</div>
                 <div style="margin-top: 5px; padding-left: 0;">
                     <div class="achievement-item" style="padding-left: 20px;"><strong>a)</strong> Levha tektoniğine neden olan süreçleri belirler.</div>
@@ -415,7 +420,7 @@
             </div>
 
             <div class="instruction-card">
-                <div class="instruction-title">📝 Yönerge</div>
+                <div class="instruction-title">Yönerge</div>
                 <div class="instruction-text">
                     Aşağıdaki etkileşimli modelde volkanik yapıları doğru yerlere sürükleyip bırakarak öğreneceksiniz. 
                     Volkanizmaya ait yapıları görsel üzerindeki doğru konumlarına yerleştirin. 
@@ -423,7 +428,7 @@
                 </div>
             </div>
 
-            <button class="start-button" id="startButton">🚀 Etkinliğe Başla</button>
+            <button class="start-button" id="startButton"> Etkinliğe Başla</button>
         </div>
     </div>
 
@@ -450,7 +455,7 @@
             <div id="drop-dayk" class="drop-zone absolute rounded" style="top: 40%; left: 8%; width: 30%; height: 10%;"></div>
             <div id="drop-sill" class="drop-zone absolute rounded" style="top: 57%; left: 2%; width: 30%; height: 10%; transform: rotate(15deg);"></div>
             <div id="drop-batolit" class="drop-zone absolute rounded" style="top: 72%; left: 55%; width: 35%; height: 12%; transform: rotate(-15deg);"></div>
-            <div id="drop-lakolit" class="drop-zone absolute rounded" style="top: 55%; left: 61%; width: 33%; height: 10%;"></div>
+            <div id="drop-lakolit" class="drop-zone absolute rounded" style="top: 55%; left: 70%; width: 33%; height: 10%;"></div>
         </div>
 
         <div class="flex justify-center gap-4 items-center">
@@ -699,8 +704,29 @@
                 labels.forEach(label => label.setAttribute('draggable', 'false'));
                 checkButton.disabled = true;
 
+                // SCORM: Puanı kaydet
+                const scorePercentage = (correctPlacements / totalPlacements) * 100;
+                if (typeof pipwerks !== 'undefined' && scormInitialized) {
+                    pipwerks.SCORM.set("cmi.core.score.raw", scorePercentage.toString());
+                    pipwerks.SCORM.set("cmi.core.score.min", "0");
+                    pipwerks.SCORM.set("cmi.core.score.max", "100");
+                    pipwerks.SCORM.save();
+                    console.log("SCORM puan kaydedildi: " + scorePercentage);
+                }
+
                 if (correctPlacements === totalPlacements) {
                     showSuccessModal();
+                    // SCORM: Etkinlik tamamlandı
+                    if (typeof completeSignalToLMS === 'function') {
+                        completeSignalToLMS();
+                    }
+                } else {
+                    // Başarısız olundu, incomplete durumunda kal
+                    if (typeof pipwerks !== 'undefined' && scormInitialized) {
+                        pipwerks.SCORM.set("cmi.core.lesson_status", "incomplete");
+                        pipwerks.SCORM.save();
+                        console.log("SCORM durumu: incomplete (tüm sorular doğru değil)");
+                    }
                 }
             });
             
@@ -741,6 +767,85 @@
             scoreElement.textContent = 0;
         });
     </script>
+
+<script src="SCORM_API_wrapper.js"></script>
+<script>
+    // SCORM Entegrasyon Betikleri
+    pipwerks.SCORM.version = "1.2";
+    let scormInitialized = false;
+
+    // SCORM iletişimini başlatan fonksiyon
+    function initializeSCORM() {
+        if (scormInitialized) {
+            console.log("SCORM zaten başlatıldı.");
+            return true;
+        }
+        try {
+            var initSuccess = pipwerks.SCORM.init();
+            console.log("SCORM başlatma başarılı: ", initSuccess);
+            if (initSuccess) {
+                scormInitialized = true;
+                pipwerks.SCORM.set("cmi.core.lesson_status", "incomplete");
+                pipwerks.SCORM.save();
+                console.log("SCORM başarıyla başlatıldı.");
+            } else {
+                console.error("SCORM başlatılamadı.");
+            }
+            return initSuccess;
+        } catch (error) {
+            console.error("SCORM başlatma hatası: ", error);
+            return false;
+        }
+    }
+
+    // Eğitimin tamamlandığı sinyalini LMS'e gönderen fonksiyon
+    function completeSignalToLMS() {
+        if (!scormInitialized) {
+            initializeSCORM();
+        }
+        if (scormInitialized) {
+            try {
+                var setStatusSuccess = pipwerks.SCORM.set("cmi.core.lesson_status", "completed");
+                if (setStatusSuccess) {
+                    console.log("SCORM ders durumu 'completed' olarak ayarlandı.");
+                    var saveSuccess = pipwerks.SCORM.save();
+                    if (saveSuccess) {
+                        console.log("SCORM verileri başarıyla kaydedildi.");
+                    } else {
+                        console.error("SCORM verileri kaydedilemedi.");
+                    }
+                } else {
+                    console.error("SCORM ders durumu ayarlanamadı.");
+                }
+            } catch (error) {
+                console.error("SCORM tamamlama hatası: ", error);
+            }
+        } else {
+            console.error("SCORM başlatılmadığı için tamamlama durumu ayarlanamıyor.");
+        }
+    }
+
+    // Pencere kapatılmadan önce SCORM oturumunu sonlandır
+    window.addEventListener("beforeunload", function () {
+        console.log("SCORM oturumu kapatılıyor...");
+        if (scormInitialized) {
+            pipwerks.SCORM.quit();
+        }
+    });
+
+    // Mobil tarayıcılar için ek güvenlik önlemi
+    window.addEventListener("unload", function () {
+        if (scormInitialized) {
+            pipwerks.SCORM.quit();
+        }
+    });
+    
+    // Sayfa yüklendiğinde SCORM'u otomatik olarak başlat
+    document.addEventListener("DOMContentLoaded", function() {
+        console.log("DOM yüklendi, SCORM başlatılıyor...");
+        initializeSCORM();
+    });
+</script>
 
 </body>
 </html>
