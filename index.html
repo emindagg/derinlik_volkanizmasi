@@ -189,6 +189,22 @@
             gap: 10px;
         }
 
+        .fullscreen-btn {
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            transition: all 0.3s ease;
+            padding: 0;
+        }
+
+        .fullscreen-btn:hover {
+            transform: scale(1.2);
+        }
+
         .toggle-switch {
             width: 60px;
             height: 32px;
@@ -402,6 +418,7 @@
 </head>
 <body class="bg-white flex flex-col items-center justify-center min-h-screen p-4">
     <div class="theme-toggle">
+        <button class="fullscreen-btn" id="fullscreenBtn" title="Tam Ekran">⛶</button>
         <div class="toggle-switch" id="darkModeToggle">
             <div class="toggle-circle">🌙</div>
         </div>
@@ -490,6 +507,30 @@
             darkModeToggle.classList.toggle('active');
             const isDark = document.body.classList.contains('dark');
             localStorage.setItem('darkMode', isDark);
+        });
+
+        // Fullscreen Toggle
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
+        
+        fullscreenBtn.addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                // Tam ekrana geç
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.log('Tam ekran hatası:', err);
+                });
+            } else {
+                // Tam ekrandan çık
+                document.exitFullscreen();
+            }
+        });
+
+        // Fullscreen değişikliklerini dinle
+        document.addEventListener('fullscreenchange', () => {
+            if (document.fullscreenElement) {
+                fullscreenBtn.textContent = '⛶';
+            } else {
+                fullscreenBtn.textContent = '⛶';
+            }
         });
 
         // Sayfa Geçişi
