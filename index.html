@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Derinlik Volkanizması</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            user-select: none;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        body.dark {
+            background-color: #1a1a1a;
+            color: #e5e5e5;
+        }
+
+        .drop-zone {
+            border: 2px dashed rgba(0, 0, 0, 0.852);
+            background: rgba(0, 0, 0, 0.05);
+            transition: all 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        body.dark .drop-zone {
+            border-color: rgba(255, 255, 255, 0.644);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .drop-zone.drag-over {
+            border-style: solid;
+            background: rgba(59, 130, 246, 0.2);
+        }
+        
+        .drop-zone.correct {
+            background-color: rgba(74, 222, 128, 0.6);
+            border-color: #16a34a;
+            z-index: 10;
+        }
+
+        .drop-zone.correct::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(74, 222, 128, 0.4);
+            pointer-events: none;
+            z-index: 2;
+            border-radius: inherit;
+        }
+
+        .drop-zone.incorrect {
+            background-color: rgba(239, 68, 68, 0.6);
+            border-color: #b91c1c;
+            z-index: 10;
+        }
+
+        .drop-zone.incorrect::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(239, 68, 68, 0.4);
+            pointer-events: none;
+            z-index: 2;
+            border-radius: inherit;
+        }
+
+        .label {
+            touch-action: none;
+            position: relative;
+            z-index: 1;
+        }
+
+        .label:active {
+            transform: scale(1.05);
+        }
+
+        .label.dragging {
+            position: fixed;
+            pointer-events: none;
+            z-index: 9999;
+            opacity: 0.8;
+            transform: scale(1.1);
+            transition: none !important;
+        }
+
+        #image-container {
+            position: relative;
+            max-width: 600px;
+            width: 100%;
+            aspect-ratio: 800 / 625;
+            margin: auto;
+        }
+
+        #volcano-image {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        
+        #success-modal {
+            transition: all 0.3s ease;
+        }
+
+        .header-title {
+            background: linear-gradient(135deg, #dc2626 0%, #ea580c 50%, #f97316 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            letter-spacing: -0.5px;
+        }
+
+        .header-container {
+            background: linear-gradient(180deg, rgba(30, 64, 175, 0.05) 0%, rgba(124, 58, 237, 0.05) 100%);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            transition: background 0.3s ease, border-color 0.3s ease;
+        }
+
+        body.dark .header-container {
+            background: linear-gradient(180deg, rgba(139, 92, 246, 0.1) 0%, rgba(147, 51, 234, 0.1) 100%);
+            border-color: rgba(139, 92, 246, 0.3);
+        }
+
+        .toggle-dark-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .toggle-dark-btn:hover {
+            background: rgba(0, 0, 0, 0.2);
+            transform: scale(1.1);
+        }
+
+        body.dark .toggle-dark-btn {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        body.dark .toggle-dark-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .dark-modal {
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        body.dark .dark-modal {
+            background-color: #2a2a2a;
+            color: #e5e5e5;
+        }
+
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .toggle-switch {
+            width: 60px;
+            height: 32px;
+            background: linear-gradient(135deg, #e0e7ff 0%, #dbeafe 100%);
+            border-radius: 20px;
+            cursor: pointer;
+            position: relative;
+            border: 2px solid #bfdbfe;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            padding: 0 3px;
+        }
+
+        .toggle-switch.active {
+            background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+            border-color: #4c1d95;
+        }
+
+        .toggle-circle {
+            width: 26px;
+            height: 26px;
+            background: white;
+            border-radius: 50%;
+            position: absolute;
+            left: 3px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        .toggle-switch.active .toggle-circle {
+            left: calc(100% - 29px);
+        }
+
+        .toggle-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: color 0.3s ease;
+        }
+
+        body.dark .toggle-label {
+            color: #cbd5e1;
+        }
+
+        /* Giriş Sayfası Stili */
+        .welcome-page {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 1;
+            transition: opacity 0.3s ease;
+            z-index: 999;
+            background-color: inherit;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .welcome-page.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .welcome-container {
+            max-width: 700px;
+            width: 95%;
+            background: linear-gradient(135deg, rgba(219, 39, 119, 0.1) 0%, rgba(239, 68, 68, 0.1) 100%);
+            border-radius: 16px;
+            border: 2px solid rgba(239, 68, 68, 0.2);
+            padding: 24px;
+            text-align: center;
+        }
+
+        body.dark .welcome-container {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(147, 51, 234, 0.1) 100%);
+            border-color: rgba(139, 92, 246, 0.3);
+        }
+
+        .welcome-title {
+            background: linear-gradient(135deg, #dc2626 0%, #ea580c 50%, #f97316 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: clamp(1.8rem, 5vw, 2.5rem);
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        .achievement-card {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            text-align: left;
+            border-left: 5px solid #dc2626;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        body.dark .achievement-card {
+            background: #2a2a2a;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .achievement-title {
+            font-weight: bold;
+            font-size: clamp(0.9rem, 2vw, 1rem);
+            color: #dc2626;
+            margin-bottom: 8px;
+        }
+
+        .achievement-item {
+            margin: 6px 0;
+            padding-left: 16px;
+            position: relative;
+            line-height: 1.5;
+            font-size: clamp(0.8rem, 1.5vw, 0.9rem);
+        }
+
+        .achievement-item:before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: #dc2626;
+            font-weight: bold;
+        }
+
+        .instruction-card {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            text-align: left;
+            border-left: 5px solid #3b82f6;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        body.dark .instruction-card {
+            background: #2a2a2a;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .instruction-title {
+            font-weight: bold;
+            font-size: clamp(0.9rem, 2vw, 1rem);
+            color: #3b82f6;
+            margin-bottom: 8px;
+        }
+
+        .instruction-text {
+            line-height: 1.5;
+            font-size: clamp(0.8rem, 1.5vw, 0.9rem);
+        }
+
+        .start-button {
+            background: linear-gradient(135deg, #dc2626 0%, #f97316 100%);
+            color: white;
+            border: none;
+            padding: clamp(12px, 3vw, 16px) clamp(24px, 6vw, 40px);
+            font-size: clamp(0.9rem, 2vw, 1rem);
+            font-weight: 600;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
+            margin-top: 16px;
+        }
+
+        .start-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(220, 38, 38, 0.4);
+        }
+
+        .start-button:active {
+            transform: translateY(0);
+        }
+
+        .activity-page {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+
+        #check-button:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        #check-button:disabled:hover {
+            background: #94a3b8;
+            transform: none;
+        }
+
+        .activity-page.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+    </style>
+</head>
+<body class="bg-white flex flex-col items-center justify-center min-h-screen p-4">
+    <div class="theme-toggle">
+        <div class="toggle-switch" id="darkModeToggle">
+            <div class="toggle-circle">🌙</div>
+        </div>
+    </div>
+
+    <!-- Giriş Sayfası -->
+    <div class="welcome-page active" id="welcomePage">
+        <div class="welcome-container">
+            <h1 class="welcome-title">Derinlik Volkanizması</h1>
+            
+            <div class="achievement-card">
+                <div class="achievement-title">🎯 Kazanım</div>
+                <div class="achievement-item"><strong>COĞ.10.3.1.</strong> Yerkürenin tektonik yapısını çözümleyebilme</div>
+                <div style="margin-top: 5px; padding-left: 0;">
+                    <div class="achievement-item" style="padding-left: 20px;"><strong>a)</strong> Levha tektoniğine neden olan süreçleri belirler.</div>
+                    <div class="achievement-item" style="padding-left: 20px;"><strong>b)</strong> Yeryüzü şekilleri ile levha tektoniği arasındaki ilişkiyi belirler.</div>
+                </div>
+            </div>
+
+            <div class="instruction-card">
+                <div class="instruction-title">📝 Yönerge</div>
+                <div class="instruction-text">
+                    Aşağıdaki etkileşimli modelde volkanik yapıları doğru yerlere sürükleyip bırakarak öğreneceksiniz. 
+                    Volkanizmaya ait yapıları görsel üzerindeki doğru konumlarına yerleştirin. 
+                    Her doğru yerleştirmede puan kazanacaksınız.
+                </div>
+            </div>
+
+            <button class="start-button" id="startButton">🚀 Etkinliğe Başla</button>
+        </div>
+    </div>
+
+    <!-- Etkinlik Sayfası -->
+    <div class="activity-page active" id="activityPage">
+
+    <div class="w-full max-w-4xl">
+        <div class="header-container p-4 mb-6">
+            <h1 class="header-title text-3xl font-bold text-center">Derinlik Volkanizması</h1>
+            <p class="text-center text-gray-600 text-xs mt-1">Derinlik volkanizmasına ait etiketleri doğru yerlere sürükleyip bırakın</p>
+        </div>
+        
+        <div class="flex gap-3 justify-center mb-4 flex-wrap" id="labels-container">
+            <div id="label-aktif-volkan" data-target="aktif-volkan" class="label bg-blue-100 text-blue-800 px-3 py-1 rounded text-sm cursor-grab" draggable="true">Aktif Volkan</div>
+            <div id="label-dayk" data-target="dayk" class="label bg-green-100 text-green-800 px-3 py-1 rounded text-sm cursor-grab" draggable="true">Dayk</div>
+            <div id="label-sill" data-target="sill" class="label bg-yellow-100 text-yellow-800 px-3 py-1 rounded text-sm cursor-grab" draggable="true">Sill</div>
+            <div id="label-batolit" data-target="batolit" class="label bg-purple-100 text-purple-800 px-3 py-1 rounded text-sm cursor-grab" draggable="true">Batolit</div>
+            <div id="label-lakolit" data-target="lakolit" class="label bg-pink-100 text-pink-800 px-3 py-1 rounded text-sm cursor-grab" draggable="true">Lakolit</div>
+        </div>
+
+        <div id="image-container" class="relative mb-4">
+            <img id="volcano-image" src="volkan.png" alt="Volkanik yapılar">
+            <div id="drop-aktif-volkan" class="drop-zone absolute rounded" style="top: 8%; left: 8%; width: 30%; height: 12%;"></div>
+            <div id="drop-dayk" class="drop-zone absolute rounded" style="top: 40%; left: 8%; width: 30%; height: 10%;"></div>
+            <div id="drop-sill" class="drop-zone absolute rounded" style="top: 57%; left: 2%; width: 30%; height: 10%; transform: rotate(15deg);"></div>
+            <div id="drop-batolit" class="drop-zone absolute rounded" style="top: 72%; left: 55%; width: 35%; height: 12%; transform: rotate(-15deg);"></div>
+            <div id="drop-lakolit" class="drop-zone absolute rounded" style="top: 55%; left: 61%; width: 33%; height: 10%;"></div>
+        </div>
+
+        <div class="flex justify-center gap-4 items-center">
+            <span class="text-sm"><span id="score">0</span>/<span id="total">5</span></span>
+            <button id="check-button" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-1 rounded text-sm" disabled>Kontrol Et</button>
+            <button id="reset-button" class="bg-red-500 hover:bg-red-600 text-white px-4 py-1 rounded text-sm">Sıfırla</button>
+        </div>
+    </div>
+
+    <div id="success-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 scale-95 pointer-events-none">
+        <div class="bg-white dark-modal rounded-lg shadow-lg p-6 text-center">
+            <h2 class="text-xl font-bold mb-2">Tebrikler!</h2>
+            <p class="mb-4 text-sm">Tüm etiketleri doğru yerleştirdiniz.</p>
+            <button id="play-again-button" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded text-sm">Tekrar Oyna</button>
+        </div>
+    </div>
+
+
+    <script>
+        // Dark Mode Toggle
+        const darkModeToggle = document.getElementById('darkModeToggle');
+        const isDarkMode = localStorage.getItem('darkMode') === 'true';
+        
+        if (isDarkMode) {
+            document.body.classList.add('dark');
+            darkModeToggle.classList.add('active');
+        }
+        
+        darkModeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark');
+            darkModeToggle.classList.toggle('active');
+            const isDark = document.body.classList.contains('dark');
+            localStorage.setItem('darkMode', isDark);
+        });
+
+        // Sayfa Geçişi
+        const startButton = document.getElementById('startButton');
+        const welcomePage = document.getElementById('welcomePage');
+        const activityPage = document.getElementById('activityPage');
+
+        startButton.addEventListener('click', () => {
+            welcomePage.classList.add('hidden');
+            activityPage.classList.add('active');
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const labels = document.querySelectorAll('.label');
+            const dropZones = document.querySelectorAll('.drop-zone');
+            const labelsContainer = document.getElementById('labels-container');
+            const checkButton = document.getElementById('check-button');
+            const resetButton = document.getElementById('reset-button');
+            const playAgainButton = document.getElementById('play-again-button');
+            const scoreElement = document.getElementById('score');
+            const totalElement = document.getElementById('total');
+            const successModal = document.getElementById('success-modal');
+
+            const totalPlacements = dropZones.length;
+            totalElement.textContent = totalPlacements;
+
+            // Etiketlerin yerleşimini kontrol et
+            function checkAllLabelsPlaced() {
+                let placedCount = 0;
+                dropZones.forEach(zone => {
+                    if (zone.querySelector('.label')) {
+                        placedCount++;
+                    }
+                });
+                checkButton.disabled = placedCount !== totalPlacements;
+            }
+
+            // Sürükleme olayları
+            let draggedElement = null;
+            let touchStartX = 0;
+            let touchStartY = 0;
+
+            labels.forEach(label => {
+                label.addEventListener('dragstart', (e) => {
+                    if (!label.draggable) return;
+                    draggedElement = label;
+                    e.dataTransfer.setData('text/plain', label.id);
+                    setTimeout(() => {
+                        label.classList.add('opacity-50');
+                    }, 0);
+                });
+
+                label.addEventListener('dragend', (e) => {
+                    label.classList.remove('opacity-50');
+                    draggedElement = null;
+                });
+
+                // Touch events for mobile
+                label.addEventListener('touchstart', (e) => {
+                    if (label.getAttribute('draggable') === 'false') return;
+                    draggedElement = label;
+                    const touch = e.touches[0];
+                    touchStartX = touch.clientX;
+                    touchStartY = touch.clientY;
+                    
+                    // Make label follow finger
+                    label.classList.add('dragging');
+                    label.style.left = (touch.clientX - label.offsetWidth / 2) + 'px';
+                    label.style.top = (touch.clientY - label.offsetHeight / 2) + 'px';
+                });
+
+                label.addEventListener('touchmove', (e) => {
+                    if (!draggedElement) return;
+                    e.preventDefault();
+                    const touch = e.touches[0];
+                    const x = touch.clientX;
+                    const y = touch.clientY;
+                    
+                    // Move label with finger
+                    draggedElement.style.left = (x - draggedElement.offsetWidth / 2) + 'px';
+                    draggedElement.style.top = (y - draggedElement.offsetHeight / 2) + 'px';
+                    
+                    // Check which drop zone is under the touch
+                    draggedElement.style.pointerEvents = 'none';
+                    const elementAtPoint = document.elementFromPoint(x, y);
+                    draggedElement.style.pointerEvents = '';
+                    
+                    // Remove drag-over from all zones
+                    dropZones.forEach(zone => zone.classList.remove('drag-over'));
+                    
+                    // Add drag-over to the zone under touch
+                    if (elementAtPoint && elementAtPoint.classList.contains('drop-zone')) {
+                        if (!elementAtPoint.classList.contains('correct') && !elementAtPoint.classList.contains('incorrect')) {
+                            elementAtPoint.classList.add('drag-over');
+                        }
+                    }
+                });
+
+                label.addEventListener('touchend', (e) => {
+                    if (!draggedElement) return;
+                    
+                    const touch = e.changedTouches[0];
+                    const x = touch.clientX;
+                    const y = touch.clientY;
+                    
+                    // Find the drop zone under the touch point
+                    draggedElement.style.pointerEvents = 'none';
+                    const elementAtPoint = document.elementFromPoint(x, y);
+                    draggedElement.style.pointerEvents = '';
+                    
+                    label.classList.remove('dragging');
+                    label.style.left = '';
+                    label.style.top = '';
+                    
+                    if (elementAtPoint && elementAtPoint.classList.contains('drop-zone')) {
+                        const zone = elementAtPoint;
+                        
+                        // Sürüklenen etiketin eski konumunu bul
+                        const oldParent = draggedElement.parentElement;
+
+                        // Eğer hedef alanda zaten bir etiket varsa, onu eski yere gönder
+                        if (zone.children.length > 0) {
+                            const existingLabel = zone.firstElementChild;
+                            
+                            // Eğer sürüklenen etiket bir drop zone'dan geliyorsa, yer değiştir
+                            if (oldParent.classList.contains('drop-zone')) {
+                                oldParent.appendChild(existingLabel);
+                            } else {
+                                // Değilse, labels container'a gönder
+                                labelsContainer.appendChild(existingLabel);
+                            }
+                        }
+                        
+                        zone.appendChild(draggedElement);
+                    }
+                    
+                    // Remove drag-over from all zones
+                    dropZones.forEach(zone => zone.classList.remove('drag-over'));
+                    draggedElement = null;
+                    
+                    // Tüm etiketlerin yerleşip yerleşmediğini kontrol et
+                    checkAllLabelsPlaced();
+                });
+            });
+
+            // Bırakma alanı olayları
+            dropZones.forEach(zone => {
+                zone.addEventListener('dragover', (e) => {
+                    e.preventDefault(); 
+                    if (!zone.classList.contains('correct') && !zone.classList.contains('incorrect')) {
+                         zone.classList.add('drag-over');
+                    }
+                });
+
+                zone.addEventListener('dragleave', () => {
+                    zone.classList.remove('drag-over');
+                });
+
+                zone.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    zone.classList.remove('drag-over');
+
+                    const draggedLabelId = e.dataTransfer.getData('text/plain');
+                    const draggedLabel = document.getElementById(draggedLabelId);
+                    
+                    if(!draggedLabel) return;
+
+                    // Sürüklenen etiketin eski konumunu bul
+                    const oldParent = draggedLabel.parentElement;
+
+                    // Eğer hedef alanda zaten bir etiket varsa, onu eski yere gönder
+                    if (zone.children.length > 0) {
+                        const existingLabel = zone.firstElementChild;
+                        
+                        // Eğer sürüklenen etiket bir drop zone'dan geliyorsa, yer değiştir
+                        if (oldParent.classList.contains('drop-zone')) {
+                            oldParent.appendChild(existingLabel);
+                        } else {
+                            // Değilse, labels container'a gönder
+                            labelsContainer.appendChild(existingLabel);
+                        }
+                    }
+                    
+                    zone.appendChild(draggedLabel);
+                    
+                    // Tüm etiketlerin yerleşip yerleşmediğini kontrol et
+                    checkAllLabelsPlaced();
+                });
+            });
+
+            // Kontrol Et Butonu Olayı
+            checkButton.addEventListener('click', () => {
+                let correctPlacements = 0;
+                
+                dropZones.forEach(zone => {
+                    const placedLabel = zone.querySelector('.label');
+                    if (placedLabel) {
+                        const dropZoneId = zone.id.replace('drop-', '');
+                        const labelTargetId = placedLabel.dataset.target;
+
+                        if (dropZoneId === labelTargetId) {
+                            zone.classList.add('correct');
+                            correctPlacements++;
+                        } else {
+                            zone.classList.add('incorrect');
+                        }
+                    }
+                });
+                
+                scoreElement.textContent = correctPlacements;
+                
+                // Kontrolden sonra sürüklemeyi devre dışı bırak
+                labels.forEach(label => label.setAttribute('draggable', 'false'));
+                checkButton.disabled = true;
+
+                if (correctPlacements === totalPlacements) {
+                    showSuccessModal();
+                }
+            });
+            
+            // Başarı modalını gösterme
+            function showSuccessModal() {
+                 successModal.classList.remove('opacity-0', 'scale-95', 'pointer-events-none');
+            }
+
+            // Başarı modalını gizleme
+            function hideSuccessModal() {
+                successModal.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+            }
+
+            // Sıfırlama fonksiyonu
+            function resetExercise() {
+                scoreElement.textContent = 0;
+                hideSuccessModal();
+
+                dropZones.forEach(zone => {
+                    zone.innerHTML = '';
+                    zone.classList.remove('correct', 'incorrect', 'drag-over');
+                });
+                
+                labels.forEach(label => {
+                    labelsContainer.appendChild(label);
+                    label.setAttribute('draggable', 'true');
+                });
+                
+                checkButton.disabled = true;
+                // Tüm etiketlerin yerleşip yerleşmediğini kontrol et
+                checkAllLabelsPlaced();
+            }
+
+            resetButton.addEventListener('click', resetExercise);
+            playAgainButton.addEventListener('click', resetExercise);
+
+            // Başlangıç durumu
+            scoreElement.textContent = 0;
+        });
+    </script>
+
+</body>
+</html>
+
