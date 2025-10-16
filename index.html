@@ -11,6 +11,8 @@
             font-family: 'Inter', sans-serif;
             user-select: none;
             transition: background-color 0.3s ease, color 0.3s ease;
+            overscroll-behavior: none;
+            touch-action: pan-x pan-y;
         }
 
         body.dark {
@@ -422,7 +424,7 @@
             <div class="instruction-card">
                 <div class="instruction-title">Yönerge</div>
                 <div class="instruction-text">
-                    Bu etkileşimli modelde volkanizmaya ait oluşumları, doğru yerlere sürükleyip bırakarak öğreneceksiniz. 
+                    Bu etkileşimli modelde derinlik volkanizmasına ait oluşumları, doğru yerlere sürükleyip bırakarak öğreneceksiniz. 
                     Her doğru yerleştirmede puan kazanacaksınız.
                 </div>
             </div>
@@ -467,7 +469,7 @@
     <div id="success-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 scale-95 pointer-events-none">
         <div class="bg-white dark-modal rounded-lg shadow-lg p-6 text-center">
             <h2 class="text-xl font-bold mb-2">Tebrikler!</h2>
-            <p class="mb-4 text-sm">Tüm etiketleri doğru yerleştirdiniz.</p>
+            <p class="mb-4 text-sm">Bütün oluşumları doğru yerleştirdiniz.</p>
             <button id="play-again-button" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded text-sm">Tekrar Oyna</button>
         </div>
     </div>
@@ -562,6 +564,7 @@
                 label.addEventListener('touchmove', (e) => {
                     if (!draggedElement) return;
                     e.preventDefault();
+                    e.stopPropagation();
                     const touch = e.touches[0];
                     const x = touch.clientX;
                     const y = touch.clientY;
@@ -745,13 +748,23 @@
                 hideSuccessModal();
 
                 dropZones.forEach(zone => {
-                    zone.innerHTML = '';
                     zone.classList.remove('correct', 'incorrect', 'drag-over');
                 });
                 
+                // Tüm etiketleri başlangıç konumlarına geri getir
                 labels.forEach(label => {
+                    // Eğer etiket drop zone içindeyse, çıkar
+                    if (label.parentElement && label.parentElement.classList.contains('drop-zone')) {
+                        label.parentElement.removeChild(label);
+                    }
+                    // Etiketi başlangıç konumuna ekle
                     labelsContainer.appendChild(label);
                     label.setAttribute('draggable', 'true');
+                    // Dragging sınıfını ve stillerini temizle
+                    label.classList.remove('dragging', 'opacity-50');
+                    label.style.left = '';
+                    label.style.top = '';
+                    label.style.position = '';
                 });
                 
                 checkButton.disabled = true;
